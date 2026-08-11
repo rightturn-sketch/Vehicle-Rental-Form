@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>電子出租單簽署系統</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  :root{
+    --background:#f8efde; --foreground:#051220; --card:#fffbf3;
+    --primary:#0b1c2c; --primary-foreground:#fdfaf3;
+    --secondary:#e5dac1; --muted:#ede5d6; --muted-foreground:#445465;
+    --accent:#df2414; --accent-foreground:#fffbf3;
+    --border:#0d1c2a; --input:#cac3b6; --ring:#df2414;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Noto Sans TC', system-ui, -apple-system, sans-serif;
+    background-color:var(--background); color:var(--foreground);
+    background-image:
+      linear-gradient(90deg, rgba(13,28,42,0.05) 1px, transparent 1px),
+      linear-gradient(rgba(13,28,42,0.05) 1px, transparent 1px),
+      radial-gradient(circle at 18% 8%, rgba(240,106,46,0.18), transparent 28rem),
+      radial-gradient(circle at 88% 16%, rgba(223,36,20,0.11), transparent 24rem);
+    background-size:28px 28px, 28px 28px, auto, auto;
+  }
+  button,input,textarea,select{font-family:inherit;}
+  .wrap{max-width:1500px;margin:0 auto;padding:24px 16px 60px;}
+  @media(min-width:1024px){ .wrap{padding:24px 32px 60px;} }
+  .grid-main{display:grid;gap:24px;}
+  @media(min-width:1024px){ .grid-main{grid-template-columns:430px 1fr;} }
+  .hero{border:3px solid var(--border);background:var(--card);padding:20px;box-shadow:10px 10px 0 #051220;}
+  .badge{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:var(--accent-foreground);
+    padding:5px 12px;font-size:13px;font-weight:900;letter-spacing:.02em;margin-bottom:14px;}
+  .hero h1{font-size:28px;font-weight:900;letter-spacing:-0.01em;margin:0;line-height:1.2;}
+  .hero p{font-size:13.5px;font-weight:700;line-height:1.6;color:var(--muted-foreground);margin-top:12px;}
+  .card{border:2px solid var(--border);background:var(--card);margin-top:20px;}
+  .card-header{padding:16px 18px 0;}
+  .card-title{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:900;}
+  .card-content{padding:16px 18px 18px;}
+  .field-grid{display:grid;gap:12px;grid-template-columns:1fr;}
+  @media(min-width:768px){ .field-grid{grid-template-columns:1fr 1fr;} }
+  .field-wide{grid-column:1/-1;}
+  label.field{display:block;}
+  .field-label{display:block;margin-bottom:4px;font-size:11px;font-weight:900;letter-spacing:.16em;color:var(--muted-foreground);text-transform:uppercase;}
+  .field input[type=text]{width:100%;height:44px;border:2px solid var(--border);background:var(--card);
+    padding:0 10px;font-weight:700;font-size:14px;color:var(--foreground);}
+  .field input[type=text]:focus{outline:2px solid var(--ring);outline-offset:1px;}
+  textarea.raw{width:100%;min-height:176px;border:2px solid var(--border);background:#fff;padding:10px;
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;resize:vertical;}
+  textarea.raw:focus{outline:2px solid var(--ring);}
+  .btn{cursor:pointer;border:2px solid var(--border);background:var(--primary);color:var(--primary-foreground);
+    font-weight:900;font-size:13.5px;padding:10px 14px;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    transition:opacity .15s ease; width:100%;}
+  .btn:hover{opacity:.88;}
+  .btn:active{transform:translateY(1px);}
+  .btn-outline{background:#fff;color:var(--foreground);}
+  .btn-accent{background:var(--accent);color:var(--accent-foreground);}
+  .btn-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;border:2px solid var(--border);background:var(--secondary);padding:10px;margin-top:12px;}
+  .chip{border:1px solid var(--border);background:#fff;padding:4px 9px;font-size:12px;font-weight:900;}
+  .seal-file{display:flex;align-items:center;gap:8px;}
+  .seal-file input[type=file]{flex:1;border:2px solid var(--border);background:#fff;padding:8px;font-size:12.5px;font-weight:700;}
+  .sig-pad{position:relative;height:150px;border:2px dashed #64748b;background:#fff;overflow:hidden;margin-top:14px;}
+  .sig-pad canvas{width:100%;height:100%;cursor:crosshair;touch-action:none;}
+  .sig-placeholder{position:absolute;inset:0;display:grid;place-items:center;font-size:13px;font-weight:700;color:#64748b;pointer-events:none;}
+  .toolbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;
+    border:3px solid var(--border);background:var(--border);color:#fff;padding:12px;margin-bottom:18px;}
+  .toolbar-title{display:flex;align-items:center;gap:8px;font-weight:900;}
+  .toolbar-btns{display:flex;flex-wrap:wrap;gap:8px;}
+  .toolbar-btns .btn{width:auto;}
+  .pdf-note{border:2px solid var(--border);background:#fff;padding:10px 12px;font-size:12.5px;font-weight:700;margin-bottom:16px;}
+  .pdf-note a{color:var(--foreground);}
+  .pdf-note-links{display:flex;gap:14px;}
+  .pdf-note-sub{margin-top:6px;color:#64748b;}
+  #docWrap{width:100%;overflow-x:auto;}
+  #doc{width:min(100%,1120px);margin:0 auto;background:#fff;box-shadow:0 16px 45px rgba(5,18,32,.18);padding:20px;font-size:15px;container-type:inline-size;}
+  @container (max-width:640px){
+    #doc{padding:10px;font-size:12px;}
+    #doc .title{padding:16px 0;}
+    #doc .title h2{font-size:22px;letter-spacing:.25em;}
+    table.dtable td, table.dtable th{padding:7px;}
+    .infoline{min-height:38px;padding:0 8px;}
+    .infoline span{font-size:13px;}
+    .seal-stamp{width:88px;height:88px;font-size:16px;}
+    .seal-box img{max-height:88px;}
+    .sig-box{min-height:130px;padding:8px;}
+    .sig-line img{max-height:80px;}
+    .time-table td{padding:7px;}
+  }
+
+  #doc .inner{border:3px solid var(--border);background:#fff;}
+  #doc .title{border-bottom:2px solid var(--border);padding:26px 0;text-align:center;}
+  #doc .title h2{margin:0;font-size:32px;font-weight:900;letter-spacing:.4em;}
+  table.dtable{border-collapse:collapse;width:100%;table-layout:fixed;}
+  table.dtable td, table.dtable th{border:2px solid var(--border);padding:11px;overflow-wrap:anywhere;}
+  table.dtable th{font-weight:900;letter-spacing:.04em;text-align:left;}
+  .dval{color:#18324b;font-weight:700;min-height:1.2em;}
+  .grid3{display:grid;grid-template-columns:32% 34% 34%;border-top:0;}
+  .info-col{border-right:2px solid var(--border);}
+  .infoline{display:flex;min-height:52px;align-items:center;gap:10px;padding:0 12px;border-bottom:2px solid var(--border);}
+  .infoline:last-child{border-bottom:none;}
+  .infoline b{color:#0f172a;}
+  .infoline span{font-size:17px;}
+  .seal-box{display:grid;place-items:center;border-right:2px solid var(--border);border-bottom:2px solid var(--border);padding:14px;}
+  .seal-box .lbl{margin-bottom:8px;font-weight:900;}
+  .seal-stamp{color:#e20000;border:3px solid #e20000;display:grid;grid-template-columns:repeat(3,1fr);
+    place-items:center;padding:8px;text-align:center;font-size:26px;font-weight:900;line-height:1.1;
+    letter-spacing:.15em;width:130px;height:130px;}
+  .seal-stamp span{writing-mode:vertical-rl;}
+  .seal-box img{max-height:130px;max-width:100%;object-fit:contain;}
+  .sig-box{display:flex;flex-direction:column;padding:14px;min-height:190px;border-bottom:2px solid var(--border);}
+  .sig-box .lbl{text-align:center;font-weight:900;margin-bottom:8px;}
+  .sig-line{position:relative;flex:1;display:flex;align-items:center;justify-content:center;border-bottom:2px dashed #94a3b8;}
+  .sig-line img{max-height:120px;max-width:100%;object-fit:contain;}
+  .sig-line span{font-size:13px;font-weight:700;color:#64748b;}
+  .doc-footer{border-top:2px solid var(--border);padding:10px 14px;font-size:11px;font-weight:700;line-height:1.7;color:#64748b;}
+  .notes-row{border-top:2px solid var(--border);padding:10px 14px;font-size:13px;font-weight:700;color:#18324b;}
+  .trip-row td{padding:0;}
+  .trip-cell{padding:11px;border-bottom:2px solid var(--border);}
+  .trip-cell:last-child{border-bottom:none;}
+  table.time-table{width:100%;height:100%;border-collapse:collapse;table-layout:fixed;}
+  table.time-table tr:not(:last-child) td{border-bottom:2px solid var(--border);}
+  table.time-table td{border:none;padding:11px;overflow-wrap:anywhere;vertical-align:middle;}
+  table.time-table td.ttlabel{width:38%;font-weight:900;text-align:left;}
+  table.time-table td.dval{text-align:left;}
+  .foot-note{padding:16px 18px;font-size:12px;font-weight:700;line-height:1.7;color:var(--muted-foreground);}
+  hr.sep{border:none;border-top:2px solid var(--border);margin:16px 0;}
+  #toastHost{position:fixed;top:18px;right:18px;z-index:9999;display:flex;flex-direction:column;gap:8px;align-items:flex-end;}
+  .toast{background:var(--primary);color:#fff;font-weight:800;font-size:13.5px;padding:11px 16px;
+    border:2px solid #000;box-shadow:5px 5px 0 rgba(0,0,0,.25);max-width:320px;animation:slide .18s ease;}
+  .toast.err{background:var(--accent);}
+  @keyframes slide{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
+  @media print{
+    body{background:#fff !important;}
+    .no-print{display:none !important;}
+    #doc{box-shadow:none !important;}
+  }
+</style>
+</head>
+<body>
+<div id="toastHost"></div>
+<div class="wrap">
+  <div class="grid-main">
+    <aside class="no-print">
+      <div class="hero">
+        <span class="badge"><i class="fa-solid fa-wand-magic-sparkles"></i>AI 歸位原型</span>
+        <h1>電子出租單簽署系統</h1>
+        <p>司機先填既有車輛與聯絡資料；公司貼上客戶行程後，系統會依關鍵語意自動歸位到適配欄位。印章與乘客簽名可即時更換，最後可直接生成 PDF 下載儲存。</p>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-car"></i>司機既有資訊</div></div>
+        <div class="card-content">
+          <div class="field-grid" id="driverFields"></div>
+          <div class="btn-row">
+            <button class="btn" id="saveDriverBtn"><i class="fa-solid fa-floppy-disk"></i>儲存</button>
+            <button class="btn btn-outline" id="loadDriverBtn"><i class="fa-solid fa-rotate"></i>載入</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-robot"></i>公司客戶資料 → AI自動歸位</div></div>
+        <div class="card-content">
+          <textarea class="raw" id="rawText" spellcheck="false" placeholder="請貼上公司提供的客戶資料（可多行），例如：姓名、電話、日期、航班、起點、終點、時間、人數…"></textarea>
+          <div class="btn-row">
+            <button class="btn btn-accent" id="parseBtn"><i class="fa-solid fa-wand-magic-sparkles"></i>自動歸位</button>
+            <button class="btn btn-outline" id="sampleBtn">載入範例</button>
+          </div>
+          <div class="chips" id="hitsChips" style="display:none;"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-stamp"></i>印章與簽名</div></div>
+        <div class="card-content">
+          <label class="field">
+            <span class="field-label">預設印章文字（可換行）</span>
+            <textarea class="raw" id="sealText" style="min-height:70px;">永鑫汽車
+租賃
+有限公司</textarea>
+          </label>
+          <div class="seal-file" style="margin-top:12px;">
+            <input type="file" id="sealFile" accept="image/*">
+            <i class="fa-solid fa-upload"></i>
+          </div>
+          <button class="btn btn-outline" id="clearSealBtn" style="margin-top:8px;"><i class="fa-solid fa-eraser"></i>清除印章圖檔</button>
+
+          <div class="sig-pad" id="sigPadWrap">
+            <div class="sig-placeholder" id="sigPlaceholder">請於下方線上簽字</div>
+            <canvas id="sigCanvas"></canvas>
+          </div>
+          <button class="btn btn-outline" id="clearSigBtn" style="margin-top:10px;"><i class="fa-solid fa-eraser"></i>清除簽名</button>
+        </div>
+      </div>
+    </aside>
+
+    <section>
+      <div class="toolbar">
+        <div class="toolbar-title"><i class="fa-solid fa-file-lines"></i>即時出租單預覽</div>
+        <div class="toolbar-btns">
+          <button class="btn" style="background:#fff;color:var(--primary);" id="imgBtn"><i class="fa-solid fa-image"></i>存成圖片</button>
+          <button class="btn btn-outline" style="background:var(--secondary);border-color:#fff;color:var(--foreground);" id="jsonBtn"><i class="fa-solid fa-download"></i>下載資料</button>
+        </div>
+      </div>
+
+      <div class="pdf-note" id="imgNote" style="display:none;">
+        <div class="pdf-note-sub" style="margin-top:0;">圖片已產生，<b>請直接長按下方圖片</b>選擇「儲存圖片」即可存到相簿；也可以用下方連結另存。</div>
+        <div class="pdf-note-links" style="margin-top:8px;">
+          <a id="imgDownloadLink" download>下載圖片</a>
+          <a id="imgOpenLink" target="_blank" rel="noreferrer">開啟圖片</a>
+        </div>
+        <img id="resultImage" style="display:block;width:100%;height:auto;margin-top:12px;border:2px solid var(--border);" alt="出租單圖片">
+      </div>
+
+      <div id="docWrap">
+        <div id="doc">
+          <div class="inner">
+            <div class="title"><h2>出 租 單</h2></div>
+            <table class="dtable">
+              <tbody>
+                <tr>
+                  <th style="width:16%;">乘客</th><td class="dval" id="doc-passenger" style="width:34%;"></td>
+                  <th style="width:16%;">日期</th><td class="dval" id="doc-date" style="width:34%;"></td>
+                </tr>
+                <tr><th>電話</th><td class="dval" colspan="3" id="doc-passengerPhone"></td></tr>
+                <tr class="trip-row">
+                  <th>行程</th>
+                  <td colspan="2">
+                    <div class="trip-cell"><b>起點：</b><span class="dval" id="doc-startLocation"></span></div>
+                    <div class="trip-cell"><b>終點：</b><span class="dval" id="doc-endLocation"></span></div>
+                  </td>
+                  <td>
+                    <table class="time-table"><tbody>
+                      <tr><td class="ttlabel">開始時間：</td><td class="dval" id="doc-startTime"></td></tr>
+                      <tr><td class="ttlabel">結束時間：</td><td class="dval" id="doc-endTime"></td></tr>
+                    </tbody></table>
+                  </td>
+                </tr>
+                <tr>
+                  <th>類型</th><td class="dval" id="doc-tripType"></td>
+                  <th>航班</th><td class="dval" id="doc-flightNumber"></td>
+                </tr>
+                <tr><th>人數</th><td class="dval" colspan="3" id="doc-passengerCount"></td></tr>
+              </tbody>
+            </table>
+            <div class="grid3">
+              <div class="info-col">
+                <div class="infoline"><b>車型</b><span class="dval" id="doc-carModel"></span></div>
+                <div class="infoline"><b>座位</b><span class="dval" id="doc-seatType"></span></div>
+                <div class="infoline"><b>車號</b><span class="dval" id="doc-plateNumber"></span></div>
+                <div class="infoline"><b>駕駛</b><span class="dval" id="doc-driverName"></span></div>
+                <div class="infoline"><b>電話</b><span class="dval" id="doc-driverPhone"></span></div>
+              </div>
+              <div class="seal-box">
+                <div class="lbl">公司簽章</div>
+                <div id="sealPreview"></div>
+              </div>
+              <div class="sig-box">
+                <div class="lbl">乘客簽名</div>
+                <div class="sig-line" id="sigPreview"><span>請於下方線上簽字</span></div>
+              </div>
+            </div>
+            <div class="notes-row" id="notesRow" style="display:none;">
+              <b>備註：</b><span class="dval" id="doc-notes"></span>
+            </div>
+            <div class="doc-footer">※ 依規定承租人不得利用租賃車從事違法載客或犯罪行為。<br>※ 租賃期間如遇航班延遲或路況壅塞，服務時間將自動順延至行程結束。</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title"><i class="fa-solid fa-pen"></i>出租單欄位微調</div></div>
+        <div class="card-content">
+          <div class="field-grid" id="customerFields"></div>
+          <hr class="sep">
+          <p class="foot-note">目前為可直接部署的前端原型：AI歸位使用本機語意/關鍵字解析，不會把客戶資料送出瀏覽器。若後續要串接公司內部AI模型或資料庫，可在此基礎上加上登入、出租單編號、審核流程與雲端儲存。</p>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- config ----------
+  const labels = {
+    passenger:"乘客", passengerPhone:"乘客電話", date:"日期", startLocation:"起點", endLocation:"終點",
+    startTime:"開始時間", endTime:"結束時間", tripType:"類型", flightNumber:"航班", passengerCount:"人數",
+    carModel:"車型", seatType:"座位", plateNumber:"車號", driverName:"駕駛", driverPhone:"駕駛電話",
+    notes:"備註",
+  };
+  const driverFields = ["carModel","seatType","plateNumber","driverName","driverPhone"];
+  const customerFields = ["passenger","passengerPhone","date","tripType","flightNumber","passengerCount","startTime","endTime","startLocation","endLocation","notes"];
+  const wideFields = new Set(["driverPhone","startLocation","endLocation","notes"]);
+  const defaultData = {
+    passenger:"", passengerPhone:"", date:"", startLocation:"", endLocation:"",
+    startTime:"", endTime:"", tripType:"", flightNumber:"", passengerCount:"", notes:"",
+    carModel:"RAV4（灰）", seatType:"五人座", plateNumber:"RFY-6052", driverName:"吳有澤", driverPhone:"0983263262",
+  };
+  const sampleTextDemo = "乘客姓名：Lai Wei Chiuan\n日期：2026/06/30\n時間：20:15\n電話：0970534133\n上車：桃園機場 T1\n下車：臺北市大同區星明里重慶北路二段71-1號\n人數：2人\n行李：2件\n尺寸：中型\n班機(接機必填)：BR117\n收據：需要\n增高墊：需要\n安全椅：不需要";
+
+  let data = Object.assign({}, defaultData);
+  try{ data = Object.assign({}, defaultData, JSON.parse(localStorage.getItem("dispatch-data")||"{}")); }catch(e){}
+  let sealUrl = "";
+  let signatureUrl = "";
+
+  // ---------- toast ----------
+  function toast(msg, type){
+    const host = document.getElementById("toastHost");
+    const el = document.createElement("div");
+    el.className = "toast" + (type==="error" ? " err" : "");
+    el.textContent = msg;
+    host.appendChild(el);
+    setTimeout(()=>{ el.style.opacity="0"; el.style.transition="opacity .25s"; setTimeout(()=>el.remove(),250); }, 2400);
+  }
+
+  // ---------- field builders ----------
+  function buildFieldGroup(containerId, fields){
+    const c = document.getElementById(containerId);
+    fields.forEach(k=>{
+      const wrap = document.createElement("label");
+      wrap.className = "field" + (wideFields.has(k) ? " field-wide" : "");
+      const span = document.createElement("span");
+      span.className = "field-label"; span.textContent = labels[k];
+      const input = document.createElement("input");
+      input.type = "text"; input.value = data[k] || "";
+      input.dataset.field = k;
+      input.addEventListener("input", (e)=>{ setField(k, e.target.value); });
+      wrap.appendChild(span); wrap.appendChild(input);
+      c.appendChild(wrap);
+    });
+  }
+  buildFieldGroup("driverFields", driverFields);
+  buildFieldGroup("customerFields", customerFields);
+
+  function syncInputs(){
+    document.querySelectorAll("input[data-field]").forEach(inp=>{
+      inp.value = data[inp.dataset.field] || "";
+    });
+  }
+
+  function setField(k, v){
+    data[k] = v;
+    updateDoc(k);
+  }
+
+  function updateDoc(k){
+    const el = document.getElementById("doc-"+k);
+    if(el) el.textContent = data[k] || "";
+    if(k==="notes"){
+      const row = document.getElementById("notesRow");
+      if(row) row.style.display = data.notes ? "block" : "none";
+    }
+  }
+  function updateAllDoc(){ Object.keys(labels).forEach(updateDoc); }
+  updateAllDoc();
+
+  // ---------- clean / parse ----------
+  function clean(v){ return (v||"").replace(/[：:，,。;；]+$/g,"").trim(); }
+  function dateNorm(v){
+    const m = v.match(/(20\d{2})[\/\-.年](\d{1,2})[\/\-.月](\d{1,2})/);
+    return m ? (m[1]+"/"+m[2].padStart(2,"0")+"/"+m[3].padStart(2,"0")) : clean(v);
+  }
+
+  function aiParse(text){
+    const t = text.replace(/\r/g,"").replace(/[\t ]+/g," ");
+    const patch = {}; const hits = [];
+    const kv = new Map();
+    const normalized = t.replace(/：/g,":");
+    // 把「班機(接機必填)」「時間（24小時制）」這類附加在欄位名稱後面的括號註記去掉，
+    // 這樣不管客戶資料的格式怎麼寫，只要冒號前的關鍵字對得起來，冒號後面的內容都能被抓到。
+    const stripAnnotation = s => s.replace(/[（(][^）)]*[）)]/g,"").trim();
+    normalized.split(/\n+/).map(l=>l.trim()).filter(Boolean).forEach(line=>{
+      const m = line.match(/^([^:]{1,24})\s*:\s*(.*)$/);
+      if(!m) return;
+      const rawKey = stripAnnotation(m[1]).toLowerCase();
+      const rawVal = m[2].trim();
+      if(rawKey) kv.set(rawKey, rawVal);
+    });
+    const keyMap = [
+      {field:"passenger", confidence:95, keys:["乘客姓名","乘客","客戶姓名","姓名","旅客","乘車人","乘坐人"]},
+      {field:"passengerPhone", confidence:95, keys:["乘客電話","客戶電話","電話","手機","聯絡電話"]},
+      {field:"date", confidence:94, keys:["日期","用車日期","乘車日期","搭乘日期"], transform:dateNorm},
+      {field:"tripType", confidence:92, keys:["類型","行程","服務","用途"]},
+      {field:"flightNumber", confidence:92, keys:["班機","航班","航班號","航班號碼","航班編號","flight"], transform:v=>v.replace(/\s+/g," ").toUpperCase()},
+      {field:"startLocation", confidence:90, keys:["起點","上車地點","上車","出發","出發地點","from"]},
+      {field:"endLocation", confidence:90, keys:["終點","下車地點","下車","目的地","到達","到達地點","to"]},
+      {field:"startTime", confidence:92, keys:["時間","開始時間","出發時間","上車時間","start time"]},
+      {field:"endTime", confidence:86, keys:["結束時間","抵達時間","下車時間","end time"]},
+      {field:"passengerCount", confidence:88, keys:["人數","乘客數","數量"], transform:v=> v.includes("人") ? v.replace(/\s+/g," ") : (v+" 人")},
+      {field:"carModel", confidence:80, keys:["車型","車種","車款"]},
+      {field:"seatType", confidence:80, keys:["座位","座位數"]},
+      {field:"plateNumber", confidence:82, keys:["車號","車牌","車牌號碼"], transform:v=>v.toUpperCase()},
+      {field:"driverName", confidence:82, keys:["駕駛","司機","司機姓名"]},
+      {field:"driverPhone", confidence:82, keys:["駕駛電話","司機電話","司機手機"]},
+    ];
+    keyMap.forEach(rule=>{
+      if(patch[rule.field]) return;
+      const found = rule.keys.map(k=>k.toLowerCase()).find(k=>kv.has(k));
+      if(!found) return;
+      const rawV = kv.get(found) || "";
+      const value = clean(rule.transform ? rule.transform(rawV) : rawV);
+      if(!value) return;
+      patch[rule.field] = value;
+      hits.push({field:rule.field, label:labels[rule.field], value, confidence:rule.confidence});
+    });
+
+    // 行李／尺寸／收據／增高墊／安全椅：文件本身沒有對應欄位，統一整理成「備註」，
+    // 只要冒號後面有填寫內容就會被抓進來，不會遺漏。
+    const noteKeys = ["行李","尺寸","收據","增高墊","安全椅"];
+    const noteParts = [];
+    noteKeys.forEach(k=>{
+      const v = kv.get(k.toLowerCase());
+      if(v===undefined) return;
+      const val = clean(v);
+      if(!val) return;
+      noteParts.push(k+"："+val);
+      hits.push({field:"notes", label:k, value:val, confidence:88});
+    });
+    if(noteParts.length) patch.notes = noteParts.join("／");
+
+    const rules = [
+      {field:"passenger", confidence:96, regs:[/乘客(?:姓名)?[：:]\s*([^\n]+)/,/客戶(?:姓名)?[：:]\s*([^\n]+)/,/姓名[：:]\s*([^\n]+)/]},
+      {field:"passengerPhone", confidence:95, regs:[/乘客電話[：:]\s*(09\d{8})/,/客戶電話[：:]\s*(09\d{8})/,/電話[：:]\s*(09\d{8})/,/(09\d{8})/]},
+      {field:"date", confidence:94, transform:dateNorm, regs:[/日期[：:]\s*([^\n]+)/,/(20\d{2}[\/\-.年]\d{1,2}[\/\-.月]\d{1,2}日?)/]},
+      {field:"tripType", confidence:90, regs:[/類型[：:]\s*([^\n]+)/,/行程[：:]\s*(接機|送機|包車|接送|點對點|市區接送)/,/(接機|送機|包車|接送)/]},
+      {field:"flightNumber", confidence:90, transform:v=>v.replace(/\s+/g," ").toUpperCase(), regs:[/班機(?:\([^)]*\)|（[^）]*）)?[：:]\s*([^\n]+)/,/航班(?:號|号码|編號)?[：:]\s*([A-Z]{1,3}\s*\d{2,4})/i,/航班[：:]\s*([A-Z]{1,3}-?\d{2,4})/i,/(CI|BR|JX|CX|SQ|TG|JL|NH|KE)\s*\d{2,4}/i,/flight\s*(?:no\.?|number)?\s*[：:]\s*([A-Z]{1,3}\s*\d{2,4})/i]},
+      {field:"startLocation", confidence:89, regs:[/起點[：:]\s*([^\n]+)/,/上車(?:地點)?[：:]\s*([^\n]+)/,/出發(?:地點)?[：:]\s*([^\n]+)/,/從\s*([^\n]+?)\s*(?:到|至)/]},
+      {field:"endLocation", confidence:89, regs:[/終點[：:]\s*([^\n]+)/,/下車(?:地點)?[：:]\s*([^\n]+)/,/目的地[：:]\s*([^\n]+)/,/(?:到|至)\s*([^\n]+)/]},
+      {field:"startTime", confidence:92, regs:[/時間(?:\([^)]*\)|（[^）]*）)?[：:]\s*(\d{1,2}[:：]?\d{2})/,/開始時間[：:]\s*(\d{1,2}:\d{2})/,/出發時間[：:]\s*(\d{1,2}:\d{2})/,/上車時間[：:]\s*(\d{1,2}:\d{2})/]},
+      {field:"endTime", confidence:86, regs:[/結束時間[：:]\s*(\d{1,2}:\d{2})/,/抵達時間[：:]\s*(\d{1,2}:\d{2})/,/下車時間[：:]\s*(\d{1,2}:\d{2})/]},
+      {field:"passengerCount", confidence:85, transform:v=> v.includes("人") ? v : (v+" 人"), regs:[/人數[：:]\s*(\d+)\s*人?/,/(\d+)\s*人/]},
+    ];
+    rules.forEach(rule=>{
+      if(patch[rule.field]) return;
+      for(const r of rule.regs){
+        const m = t.match(r);
+        if(m && m[1]){
+          const value = clean(rule.transform ? rule.transform(m[1]) : m[1]);
+          if(value){ patch[rule.field]=value; hits.push({field:rule.field,label:labels[rule.field],value,confidence:rule.confidence}); }
+          break;
+        }
+      }
+    });
+    return {patch, hits};
+  }
+
+  document.getElementById("sampleBtn").addEventListener("click", ()=>{
+    document.getElementById("rawText").value = sampleTextDemo;
+  });
+
+  document.getElementById("parseBtn").addEventListener("click", ()=>{
+    const raw = document.getElementById("rawText").value;
+    const res = aiParse(raw);
+    Object.assign(data, res.patch);
+    syncInputs(); updateAllDoc();
+    const chipsEl = document.getElementById("hitsChips");
+    if(res.hits.length){
+      chipsEl.style.display = "flex";
+      chipsEl.innerHTML = res.hits.map(h=>'<span class="chip">'+h.label+" "+h.confidence+"%</span>").join("");
+    } else {
+      chipsEl.style.display = "none"; chipsEl.innerHTML = "";
+    }
+    toast("已自動歸位 "+res.hits.length+" 個欄位");
+  });
+
+  // ---------- driver save/load ----------
+  document.getElementById("saveDriverBtn").addEventListener("click", ()=>{
+    const pack = {};
+    driverFields.forEach(k=> pack[k]=data[k]);
+    localStorage.setItem("driver-profile", JSON.stringify(pack));
+    localStorage.setItem("dispatch-data", JSON.stringify(data));
+    toast("已儲存司機與目前出租單資料");
+  });
+  document.getElementById("loadDriverBtn").addEventListener("click", ()=>{
+    try{
+      const pack = JSON.parse(localStorage.getItem("driver-profile")||"{}");
+      Object.assign(data, pack);
+      syncInputs(); updateAllDoc();
+      toast("已帶入既有司機資料");
+    }catch(e){ toast("找不到可載入的司機資料","error"); }
+  });
+
+  // ---------- seal ----------
+  function sealTextLines(){
+    const txt = document.getElementById("sealText").value;
+    return txt.split(/\n|，|,/).filter(Boolean).slice(0,4);
+  }
+  function renderSeal(){
+    const box = document.getElementById("sealPreview");
+    if(sealUrl){
+      box.innerHTML = '<img src="'+sealUrl+'">';
+    } else {
+      const lines = sealTextLines();
+      const finalLines = lines.length ? lines : ["有限公司","租賃","公司章"];
+      box.innerHTML = '<div class="seal-stamp">'+finalLines.map(l=>"<span>"+escapeHtml(l)+"</span>").join("")+'</div>';
+    }
+  }
+  document.getElementById("sealText").addEventListener("input", renderSeal);
+  document.getElementById("sealFile").addEventListener("change", (e)=>{
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{ sealUrl = String(reader.result); renderSeal(); toast("公司印章已更換"); };
+    reader.readAsDataURL(file);
+  });
+  document.getElementById("clearSealBtn").addEventListener("click", ()=>{
+    sealUrl = ""; document.getElementById("sealFile").value=""; renderSeal(); toast("已清除印章圖檔，改用文字印章");
+  });
+  renderSeal();
+
+  function escapeHtml(v){ return String(v||"").replace(/[&<>"]/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]||m)); }
+
+  // ---------- signature pad ----------
+  const canvas = document.getElementById("sigCanvas");
+  const ctx = canvas.getContext("2d");
+  let drawing = false, last = null;
+  function sizeCanvas(){
+    const r = canvas.getBoundingClientRect();
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = r.width*ratio; canvas.height = r.height*ratio;
+    ctx.scale(ratio, ratio);
+    ctx.lineWidth = 2.8; ctx.lineCap="round"; ctx.lineJoin="round"; ctx.strokeStyle="#172033";
+  }
+  sizeCanvas();
+  function pt(e){
+    const r = canvas.getBoundingClientRect();
+    const cx = e.touches ? e.touches[0].clientX : e.clientX;
+    const cy = e.touches ? e.touches[0].clientY : e.clientY;
+    return {x: cx-r.left, y: cy-r.top};
+  }
+  function saveSig(){
+    signatureUrl = canvas.toDataURL("image/png");
+    renderSig();
+  }
+  function renderSig(){
+    document.getElementById("sigPlaceholder").style.display = signatureUrl ? "none" : "grid";
+    const preview = document.getElementById("sigPreview");
+    preview.innerHTML = signatureUrl ? '<img src="'+signatureUrl+'">' : '<span>請於下方線上簽字</span>';
+  }
+  canvas.addEventListener("pointerdown", (e)=>{ drawing=true; last=pt(e); canvas.setPointerCapture(e.pointerId); });
+  canvas.addEventListener("pointermove", (e)=>{
+    if(!drawing || !last) return;
+    const n = pt(e);
+    ctx.beginPath(); ctx.moveTo(last.x,last.y); ctx.lineTo(n.x,n.y); ctx.stroke();
+    last = n; saveSig();
+  });
+  canvas.addEventListener("pointerup", (e)=>{ drawing=false; last=null; try{canvas.releasePointerCapture(e.pointerId);}catch(err){} saveSig(); });
+  canvas.addEventListener("pointerleave", ()=>{ drawing=false; last=null; });
+  document.getElementById("clearSigBtn").addEventListener("click", ()=>{
+    ctx.clearRect(0,0,canvas.width,canvas.height); signatureUrl=""; renderSig(); toast("簽名已清除");
+  });
+  window.addEventListener("resize", ()=>{
+    const prev = signatureUrl;
+    sizeCanvas();
+    if(prev){ const img=new Image(); img.onload=()=>{ const r=canvas.getBoundingClientRect(); ctx.drawImage(img,0,0,r.width,r.height); }; img.src=prev; }
+  });
+
+  // ---------- JSON download ----------
+  document.getElementById("jsonBtn").addEventListener("click", ()=>{
+    const payload = {data, sealText: document.getElementById("sealText").value, updatedAt: new Date().toISOString()};
+    const blob = new Blob([JSON.stringify(payload,null,2)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "出租單-"+(data.date||"draft")+"-"+(data.passenger||"customer")+".json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  // ---------- shared: capture #doc at full fixed width, regardless of on-screen size ----------
+  async function captureDocCanvas(){
+    if(document.fonts && document.fonts.ready) await document.fonts.ready;
+    // 手機螢幕較窄時，畫面上的 #doc 會被縮小顯示；直接擷取會得到一張很小的圖。
+    // 這裡另外複製一份固定寬度 1120px 的版本、放到畫面外擷取，確保輸出永遠是高解析度的完整版面。
+    const original = document.getElementById("doc");
+    const clone = original.cloneNode(true);
+    clone.style.width = "1120px";
+    clone.style.minWidth = "1120px";
+    clone.style.maxWidth = "1120px";
+    clone.style.margin = "0";
+
+    const holder = document.createElement("div");
+    holder.style.position = "fixed";
+    holder.style.left = "-99999px";
+    holder.style.top = "0";
+    holder.style.width = "1120px";
+    holder.style.background = "#fff";
+    holder.appendChild(clone);
+    document.body.appendChild(holder);
+
+    try{
+      // 讓瀏覽器完成一次版面計算再擷取
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));
+      return await html2canvas(clone, {scale:2, backgroundColor:"#ffffff", useCORS:true, logging:false, width:1120, windowWidth:1120});
+    } finally {
+      holder.remove();
+    }
+  }
+
+  // ---------- save as image (for long-press to save to photo album) ----------
+  document.getElementById("imgBtn").addEventListener("click", async ()=>{
+    const btn = document.getElementById("imgBtn");
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>正在產生圖片...';
+    btn.disabled = true;
+    try{
+      const canvasImg = await captureDocCanvas();
+      const dataUrl = canvasImg.toDataURL("image/png");
+      const filename = "出租單-"+(data.date||"draft")+"-"+(data.passenger||"customer")+".png";
+
+      const note = document.getElementById("imgNote");
+      const img = document.getElementById("resultImage");
+      const dl = document.getElementById("imgDownloadLink");
+      const op = document.getElementById("imgOpenLink");
+      img.src = dataUrl;
+      dl.href = dataUrl; dl.download = filename;
+      op.href = dataUrl;
+      note.style.display = "block";
+      note.scrollIntoView({behavior:"smooth", block:"start"});
+      toast("圖片已產生，長按下方圖片即可存到相簿");
+    }catch(err){
+      console.error(err);
+      toast("圖片產生失敗："+(err && err.message ? err.message : String(err)), "error");
+    }finally{
+      btn.innerHTML = originalHtml;
+      btn.disabled = false;
+    }
+  });
+
+})();
+</script>
+</body>
+</html>
